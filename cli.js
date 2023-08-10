@@ -3,6 +3,8 @@
 const fs = require("fs");
 const path = require("path");
 const { program } = require("commander");
+const { execSync } = require('child_process');
+
 
 program.version("1.0.0");
 
@@ -36,9 +38,16 @@ program
   });
 
 program
-  .command("react [type]")
+  .command("react [type] [projectName]")
   .description("Generate a new react project")
-  .action((type) => {
+  .action((type, projectName = "newReactProject") => {
+  	const projectDir = path.join(__dirname, projectName);
+    if (!fs.existsSync(projectDir)) {
+      execSync(`npm init vite@latest ${projectName} -- --template react`, { stdio: 'inherit' });
+      console.log(`React project '${projectName}' generated with Vite.`);
+    } else {
+      console.error(`Directory '${projectName}' already exists.`);
+    }
   });
 
 program.parse(process.argv);
