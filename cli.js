@@ -3,48 +3,71 @@
 const fs = require("fs");
 const path = require("path");
 const { program } = require("commander");
-const { execSync } = require('child_process');
-
+const { execSync } = require("child_process");
+const ncp = require("ncp");
 
 program.version("1.0.0");
 
 program
-  .command("static [type] [projectName]")
+  .command("static [projectName]")
   .description("Generate a static code template")
-  .action((projectName = "newStaticTemp") => {
+  .option("-t, --type <type>", "Specify the project type (e.g., portfolio)")
+  .action((projectName = "newStaticTemp", options) => {
     const projectDir = path.join(process.cwd(), projectName);
     if (!fs.existsSync(projectDir)) {
       fs.mkdirSync(projectDir);
-      const templatesDir = path.join(__dirname, "templates/staticBasic");
-      const htmlContent = fs.readFileSync(
-        path.join(templatesDir, "index.html"),
-        "utf-8"
-      );
-      const cssContent = fs.readFileSync(
-        path.join(templatesDir, "style.css"),
-        "utf-8"
-      );
-      const jsContent = fs.readFileSync(
-        path.join(templatesDir, "script.js"),
-        "utf-8"
-      );
-      fs.writeFileSync(path.join(projectDir, "index.html"), htmlContent);
-      fs.writeFileSync(path.join(projectDir, "style.css"), cssContent);
-      fs.writeFileSync(path.join(projectDir, "script.js"), jsContent);
-      console.log(`Static code template '${projectName}' generated.`);
+
+      let templateDir;
+
+      if (options.type === "portfolio") {
+        templateDir = path.join(__dirname, "templates/portfolioBasic");
+      } else {
+        templateDir = path.join(__dirname, "templates/staticBasic");
+      }
+
+      // Use ncp to copy the entire directory structure
+      ncp(templateDir, projectDir, function (err) {
+        if (err) {
+          console.error("Error copying the template:", err);
+        } else {
+          console.log(
+            `Static code template '${projectName}' generated with type '${options.type}'.`
+          );
+        }
+      });
     } else {
       console.error(`Directory '${projectName}' already exists.`);
     }
   });
 
 program
-  .command("react [type] [projectName]")
-  .description("Generate a new react project")
-  .action((type, projectName = "newReactProject") => {
-  	const projectDir = path.join(__dirname, projectName);
+  .command("react [projectName]")
+  .description("Generate a new React project")
+  .option("-TS, --typescript", "Use TypeScript for the project")
+  .option("-TW, --tailwind", "Install Tailwind CSS")
+  .action((projectName = "newReactProject", options) => {
+    const projectDir = path.join(__dirname, projectName);
+    const template = options.typescript ? "react-ts" : "react";
     if (!fs.existsSync(projectDir)) {
-      execSync(`npm init vite@latest ${projectName} -- --template react`, { stdio: 'inherit' });
-      console.log(`React project '${projectName}' generated with Vite.`);
+      execSync(
+        `npm init vite@latest ${projectName} -- --template ${template}`,
+        {
+          stdio: "inherit",
+        }
+      );
+      if (options.tailwind) {
+        execSync(`cd ${projectName} && npm install tailwindcss`, {
+          stdio: "inherit",
+        });
+      }
+      console.log(
+        `React project '${projectName}' generated with Vite${
+          options.typescript ? " using TypeScript" : ""
+        }.`
+      );
+      if (options.tailwind) {
+        console.log("Tailwind CSS has been installed.");
+      }
     } else {
       console.error(`Directory '${projectName}' already exists.`);
     }
